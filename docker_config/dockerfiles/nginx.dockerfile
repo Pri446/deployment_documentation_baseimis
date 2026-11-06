@@ -1,22 +1,22 @@
 FROM nginx:stable-alpine
 
-ARG UID
-ARG GID
+ARG UID=1000
+ARG GID=1000
+ARG PROJECT_NAME
 
 ENV UID=${UID}
 ENV GID=${GID}
+ENV APP_PATH=/var/www/html/${PROJECT_NAME}
 
-# MacOS staff group's gid is 20, so is the dialout group in alpine linux. We're not using it, let's just remove it.
-RUN delgroup dialout
+RUN addgroup --system --gid "${GID}" laravel \
+    && adduser --system \
+        --uid "${UID}" \
+        --ingroup laravel \
+        --no-create-home \
+        --shell /sbin/nologin \
+        laravel \
+    && sed -i 's/user  nginx/user  laravel/' /etc/nginx/nginx.conf
 
-RUN addgroup -g ${GID} --system laravel
-RUN adduser -G laravel --system -D -s /bin/sh -u ${UID} laravel
-RUN sed -i "s/user  nginx/user laravel/g" /etc/nginx/nginx.conf
+COPY ./nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
-#SSL
-#EXPOSE 443
-
-ADD ./nginx/default.conf /etc/nginx/conf.d/
-
-RUN mkdir -p /var/www/html/imis
